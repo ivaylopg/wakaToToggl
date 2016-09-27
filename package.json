@@ -1,0 +1,17 @@
+{
+  "name": "wakatimetotoggl",
+  "version": "0.1.0",
+  "description": "API Adapter to post Wakatime stats as Toggl projects",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "waktime",
+    "time",
+    "toggle",
+    "tracking"
+  ],
+  "author": "Ivaylo Getov",
+  "license": "MIT"
+}
