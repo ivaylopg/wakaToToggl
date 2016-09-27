@@ -1,39 +1,36 @@
 require('dotenv').config()
-var https = require('https');
+var request = require('request');
 
-
+//createTogglProjectWithEntry();
 getTogglUserData();
 //getWakatimeData();
 
 function getTogglUserData() {
   var options = {
-    host: 'www.toggl.com',
-    port: 443,
-    path: '/api/v8/me?with_related_data=true',
+    url: 'https://www.toggl.com/api/v8/me?with_related_data=true',
     method: 'GET',
-    headers: { 'Authorization': 'Basic ' + new Buffer(process.env.TOGGLKEY + ':api_token').toString('base64') }
-  };
+    headers: {'Authorization': 'Basic ' + new Buffer(process.env.TOGGLKEY + ':api_token').toString('base64')}
+  }
 
-  var req = https.request(options, function(res) {
-    //console.log(res.statusCode);
-    res.on('data', function(d) {
-      //process.stdout.write(d);
-      processTogglData(d);
-    });
-  });
-
-  req.end();
-  req.on('error', function(e) {
-    console.error(e);
-  });
+  // Start the request
+  request(options, function (error, response, body) {
+    if (!error) {
+      //console.log(response.statusCode)
+      //console.log(body)
+      processTogglData(body);
+    } else {
+      console.error(error)
+    }
+  })
 }
 
-function processTogglData(buffer) {
-  var togglData = JSON.parse(buffer.toString())
+function processTogglData(body) {
+  var togglData = JSON.parse(body)
   if (togglData === undefined || togglData.data === undefined || togglData.data.projects === undefined) {return};
   var togglProjects = togglData.data.projects.map(function(data){
     return {"id":data.id,"name": data.name,"default_wid":togglData.data.default_wid,"wid":data.wid};
   })
+  //console.log(togglProjects);
   getWakatimeData(togglProjects);
 }
 
@@ -43,49 +40,69 @@ function getWakatimeData(togglProjects) {
   yesterday = yesterday.toISOString().split(/T/)[0];
 
   var options = {
-    host: 'wakatime.com',
-    port: 443,
-    path: '/api/v1/users/current/durations?date='+yesterday+'&api_key='+process.env.WAKAKEY,
+    url: 'https://wakatime.com/api/v1/users/current/durations?date='+yesterday+'&api_key='+process.env.WAKAKEY,
     method: 'GET'
-  };
+  }
 
-  //path: '/api/v1/users/current/summaries?start='+yesterday+'&end='+yesterday+'&api_key='+process.env.WAKAKEY,
-
-  var req = https.request(options, function(res) {
-    //console.log(res.statusCode);
-    res.on('data', function(d) {
-      //process.stdout.write(d);
-      processWakatimeData(d,togglProjects);
-    });
-  });
-
-  req.end();
-  req.on('error', function(e) {
-    console.error(e);
-  });
+  // Start the request
+  request(options, function (error, response, body) {
+    if (!error) {
+      //console.log(response.statusCode)
+      //console.log(body)
+      processWakatimeData(body,togglProjects);
+    } else {
+      console.error(error)
+    }
+  })
 }
 
 
-function processWakatimeData(buffer,togglProjects) {
-  var wakaData = JSON.parse(buffer.toString())
+function processWakatimeData(body,togglProjects) {
+  var wakaData = JSON.parse(body)
   if (wakaData === undefined || wakaData.data === undefined) {return};
   //console.log(wakaData)
-  var projects = wakaData.data;
-  console.log(togglProjects);
-  for (var i = projects.length - 1; i >= 0; i--) {
-    if (togglProjects.indexOf(projects[i].project) != -1) {
-      console.log("Project Found!");
-    } else {
-      console.log("Will Create Project");
+  var wakaProjects = wakaData.data;
+  //console.log(togglProjects);
+  for (var i = wakaProjects.length - 1; i >= 0; i--) {
+    for (var k = togglProjects.length - 1; k >= 0; k--) {
+      if (togglProjects[k].name === wakaProjects[i].project) {
+        console.log("Project Found! - %s",wakaProjects[i].project);
+        createTogglProjectWithEntry(wakaProjects[i],togglProjects[k])
+        return;
+      }
     }
   }
+  console.log("Will Create Project");
 }
 
-function createTogglProjectWithEntry(data,name) {
+function createTogglProjectWithEntry(wProject,tProject) {
+  var options = {
+      url: 'https://www.toggl.com/api/v8/projects',
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Basic " + new Buffer(process.env.TOGGLKEY + ":api_token").toString('base64'),
+      },
+      json: {
+        "project":{
+          "name":wProject.project,
+          "wid":tProject.default_wid
+        }
+      }
+  }
 
+  // Start the request
+  request(options, function (error, response, body) {
+    if (!error) {
+      //console.log(response.statusCode)
+      console.log(body)
+    } else {
+      console.error(error)
+    }
+  });
 }
 
-function addTogglEntry(data,name) {
+function addTogglEntry(data,project) {
 
 }
 
