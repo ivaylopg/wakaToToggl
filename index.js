@@ -32,7 +32,7 @@ function processTogglData(buffer) {
   var togglData = JSON.parse(buffer.toString())
   if (togglData === undefined || togglData.data === undefined || togglData.data.projects === undefined) {return};
   var togglProjects = togglData.data.projects.map(function(data){
-    return {"id":data.id,"name": data.name};
+    return {"id":data.id,"name": data.name,"default_wid":togglData.data.default_wid,"wid":data.wid};
   })
   getWakatimeData(togglProjects);
 }
@@ -71,7 +71,7 @@ function processWakatimeData(buffer,togglProjects) {
   if (wakaData === undefined || wakaData.data === undefined) {return};
   //console.log(wakaData)
   var projects = wakaData.data;
-  //console.log(projects);
+  console.log(togglProjects);
   for (var i = projects.length - 1; i >= 0; i--) {
     if (togglProjects.indexOf(projects[i].project) != -1) {
       console.log("Project Found!");
