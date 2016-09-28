@@ -63,19 +63,40 @@ function processWakatimeData(body,togglProjects) {
   //console.log(wakaData)
   var wakaProjects = wakaData.data;
   //console.log(togglProjects);
-  for (var i = wakaProjects.length - 1; i >= 0; i--) {
+  var defaultWID = togglProjects[0].default_wid;
+
+
+  var wakaProjectNames = wakaProjects.map(function(data){
+    return data.project;
+  });
+
+  wakaProjectNames = uniq(wakaProjectNames);
+
+  for (var i = wakaProjectNames.length - 1; i >= 0; i--) {
+    var entriesForProject = wakaProjects.filter(function(data){
+      if (data.project === wakaProjectNames[i]) {
+        return true;
+      }
+      return false;
+    });
+    //console.log(entriesForProject);
+
+
     for (var k = togglProjects.length - 1; k >= 0; k--) {
-      if (togglProjects[k].name === wakaProjects[i].project) {
-        console.log("Project Found! - %s",wakaProjects[i].project);
-        createTogglProjectWithEntry(wakaProjects[i],togglProjects[k])
-        return;
+      if (togglProjects[k].name === wakaProjectNames[i]) {
+        console.log("add entries to existing project")
+        addEntriesToProject(entriesForProject,togglProjects[i].id);
+        break
+      }
+      if (k === 0) {
+        console.log("create project and add entries")
+        createTogglProjectWithEntries(wakaProjectNames[i],entriesForProject,defaultWID);
       }
     }
   }
-  console.log("Will Create Project");
 }
 
-function createTogglProjectWithEntry(wProject,tProject) {
+function createTogglProjectWithEntries(name,entries,wid) {
   var options = {
       url: 'https://www.toggl.com/api/v8/projects',
       method: 'POST',
@@ -85,12 +106,76 @@ function createTogglProjectWithEntry(wProject,tProject) {
       },
       json: {
         "project":{
-          "name":wProject.project,
-          "wid":tProject.default_wid
+          "name":name,
+          "wid":wid
         }
       }
   }
 
+  // Start the request
+  request(options, function (error, response, body) {
+    if (!error) {
+      console.log(response.statusCode)
+      //console.log(body)
+      try {
+        var responseData = JSON.parse(body);
+        if (responseData.data === undefined) {
+          console.error("Error creating project");
+          return;
+        }
+        var tProject = {
+          "id": responseData.data.id,
+          "name": responseData.data.name,
+          "default_wid": wid,
+          "wid": responseData.data.wid
+        }
+        //console.log("created new project:")
+        //console.log(tProject)
+        //addTogglEntry(wProject,tProject)
+        addEntriesToProject(entries,tProject.id);
+      } catch(e) {
+        console.log("error parsing json response from createTogglProjectWithEntry()")
+      }
+    } else {
+      console.error(error)
+    }
+  });
+}
+
+
+function addEntriesToProject(entries,projectID) {
+  for (var i=0, l=entries.length; i<l; i++) {
+      addTogglEntry(entries[i],projectID);
+  }
+}
+
+function addTogglEntry(wProject,projectID) {
+  if (wProject.duration < 60) {
+    //console.log("Project %s entry too short",wProject.project)
+    return;
+  }
+
+  var startTime = new Date(wProject.time * 1000).toISOString()
+  var timeEntry = {
+    "time_entry": {
+      "description":"Created with wakaToToggl",
+      "duration":wProject.duration,
+      "start":startTime,
+      "pid":projectID,
+      "created_with":"wakaToToggl"
+    }
+  }
+
+  var options = {
+      url: 'https://www.toggl.com/api/v8/time_entries',
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Basic " + new Buffer(process.env.TOGGLKEY + ":api_token").toString('base64'),
+      },
+      json: timeEntry
+  }
+  //console.log(options)
   // Start the request
   request(options, function (error, response, body) {
     if (!error) {
@@ -102,8 +187,11 @@ function createTogglProjectWithEntry(wProject,tProject) {
   });
 }
 
-function addTogglEntry(data,project) {
-
+function uniq(a) {
+  var seen = {};
+  return a.filter(function(item) {
+    return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+  });
 }
 
 
