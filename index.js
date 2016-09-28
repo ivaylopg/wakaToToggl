@@ -61,11 +61,11 @@ function processWakatimeData(body,togglProjects) {
   var wakaData = JSON.parse(body)
   if (wakaData === undefined || wakaData.data === undefined) {return};
   //console.log(wakaData)
-  var wakaProjects = wakaData.data;
+  var wakaProjects = wakaData.data.map(function(data){
+    return {"duration":data.duration,"project": data.project.replace(" ",""),"time":data.time};
+  });
   //console.log(togglProjects);
   var defaultWID = togglProjects[0].default_wid;
-
-
   var wakaProjectNames = wakaProjects.map(function(data){
     return data.project;
   });
@@ -81,15 +81,14 @@ function processWakatimeData(body,togglProjects) {
     });
     //console.log(entriesForProject);
 
-
     for (var k = togglProjects.length - 1; k >= 0; k--) {
       if (togglProjects[k].name === wakaProjectNames[i]) {
-        console.log("add entries to existing project")
-        addEntriesToProject(entriesForProject,togglProjects[i].id);
-        break
+        console.log("Add entries to existing project '%s'", togglProjects[k].name)
+        addEntriesToProject(entriesForProject,togglProjects[k].id);
+        break;
       }
       if (k === 0) {
-        console.log("create project and add entries")
+        console.log("Create project '%s' and add entries", wakaProjectNames[i])
         createTogglProjectWithEntries(wakaProjectNames[i],entriesForProject,defaultWID);
       }
     }
@@ -115,7 +114,8 @@ function createTogglProjectWithEntries(name,entries,wid) {
   // Start the request
   request(options, function (error, response, body) {
     if (!error) {
-      console.log(response.statusCode)
+      //console.log("Create project response for %s:", name)
+      //console.log(response.statusCode)
       //console.log(body)
       try {
         var responseData = JSON.parse(body);
@@ -123,18 +123,23 @@ function createTogglProjectWithEntries(name,entries,wid) {
           console.error("Error creating project");
           return;
         }
+        console.log("------------")
+        console.log(responseData.data)
         var tProject = {
           "id": responseData.data.id,
           "name": responseData.data.name,
           "default_wid": wid,
           "wid": responseData.data.wid
         }
+        console.log("new project")
+        console.log(tProject)
         //console.log("created new project:")
         //console.log(tProject)
         //addTogglEntry(wProject,tProject)
         addEntriesToProject(entries,tProject.id);
       } catch(e) {
-        console.log("error parsing json response from createTogglProjectWithEntry()")
+        console.log("error parsing json response from createTogglProjectWithEntry(). Response:")
+        console.log(body)
       }
     } else {
       console.error(error)
@@ -158,7 +163,8 @@ function addTogglEntry(wProject,projectID) {
   var startTime = new Date(wProject.time * 1000).toISOString()
   var timeEntry = {
     "time_entry": {
-      "description":"Created with wakaToToggl",
+      "description":"Dev/Coding",
+      "tags":["wakaToToggl"],
       "duration":wProject.duration,
       "start":startTime,
       "pid":projectID,
@@ -180,6 +186,7 @@ function addTogglEntry(wProject,projectID) {
   request(options, function (error, response, body) {
     if (!error) {
       //console.log(response.statusCode)
+      console.log("Response For '%s' with ID %s",wProject.project,projectID);
       console.log(body)
     } else {
       console.error(error)
@@ -193,7 +200,6 @@ function uniq(a) {
     return seen.hasOwnProperty(item) ? false : (seen[item] = true);
   });
 }
-
 
 
 //console.log(process.env.WAKAKEY);
