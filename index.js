@@ -1,9 +1,13 @@
 require('dotenv').config()
 var request = require('request');
 
-//createTogglProjectWithEntry();
-getTogglUserData();
-//getWakatimeData();
+if (process.env.KEEPRUNNING) {
+  console.log("willKeepRunning");
+  //TO-DO
+} else {
+  console.log("onetime");
+  getTogglUserData();
+}
 
 function getTogglUserData() {
   var options = {
@@ -12,11 +16,15 @@ function getTogglUserData() {
     headers: {'Authorization': 'Basic ' + new Buffer(process.env.TOGGLKEY + ':api_token').toString('base64')}
   }
 
-  // Start the request
   request(options, function (error, response, body) {
     if (!error) {
-      //console.log(response.statusCode)
-      //console.log(body)
+      if (response.statusCode !== 200) {
+        console.log("----------------------------------")
+        console.log(response.statusCode)
+        console.log("Response from Toggl API for User Data:");
+        console.log(response)
+        console.log("----------------------------------")
+      }
       processTogglData(body);
     } else {
       console.error(error)
@@ -24,8 +32,6 @@ function getTogglUserData() {
   })
 }
 
-
-// user data "default_wid"
 
 function processTogglData(body) {
   var togglData = JSON.parse(body)
@@ -43,13 +49,12 @@ function processTogglData(body) {
     togglProjects = [{"default_wid":togglData.data.default_wid}]
   }
 
-  //console.log(togglProjects);
   getWakatimeData(togglProjects);
 }
 
 function getWakatimeData(togglProjects) {
   var yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 5)
+  yesterday.setDate(yesterday.getDate() - 1)
   yesterday = yesterday.toISOString().split(/T/)[0];
 
   var options = {
@@ -60,8 +65,13 @@ function getWakatimeData(togglProjects) {
   // Start the request
   request(options, function (error, response, body) {
     if (!error) {
-      //console.log(response.statusCode)
-      //console.log(body)
+      if (response.statusCode !== 200) {
+        console.log("----------------------------------")
+        console.log(response.statusCode)
+        console.log("Response from WakaTime API for User Durations:");
+        console.log(response)
+        console.log("----------------------------------")
+      }
       processWakatimeData(body,togglProjects);
     } else {
       console.error(error)
@@ -69,22 +79,18 @@ function getWakatimeData(togglProjects) {
   })
 }
 
-
 function processWakatimeData(body,togglProjects) {
   var wakaData = JSON.parse(body)
   if (wakaData === undefined || wakaData.data === undefined) {return};
-  //console.log(wakaData)
   var wakaProjects = wakaData.data.map(function(data){
     return {"duration":data.duration,"project": data.project.replace(" ",""),"time":data.time};
   }).filter(function(data){
-    // Projects less than 5 mins
+    // Projects less than 5 mins are ignored
     if (data.duration < 300) {
       return false;
     }
     return true;
   });
-
-  //console.log(wakaProjects);
 
   var defaultWID = togglProjects[0].default_wid;
   var wakaProjectNames = wakaProjects.map(function(data){
@@ -100,76 +106,25 @@ function processWakatimeData(body,togglProjects) {
       }
       return false;
     });
-    //console.log(entriesForProject);
 
     for (var k = togglProjects.length - 1; k >= 0; k--) {
-      //console.log("%s <==> %s",togglProjects[k].name.toLowerCase(), wakaProjectNames[i].toLowerCase());
       if (togglProjects[k].name.toLowerCase() === wakaProjectNames[i].toLowerCase()) {
-        //console.log("Add entries to existing project '%s'", togglProjects[k].name)
+        console.log("Add %s entries to existing project '%s'", entriesForProject.length, togglProjects[k].name)
         addEntriesToProject(entriesForProject,togglProjects[k].id);
         break;
       }
       if (k === 0) {
-        //console.log("Add unfiled entries", wakaProjectNames[i])
+        console.log("Add %s unfiled entries", entriesForProject.length)
         addUnfiledEntries(wakaProjectNames[i],entriesForProject,defaultWID);
       }
     }
   }
 }
 
-// function createTogglProjectWithEntries(name,entries,wid) {
-//   var options = {
-//       url: 'https://www.toggl.com/api/v8/projects',
-//       method: 'POST',
-//       headers: {
-//         "Content-Type": "application/json",
-//         "Authorization": "Basic " + new Buffer(process.env.TOGGLKEY + ":api_token").toString('base64'),
-//       },
-//       json: {
-//         "project":{
-//           "name":name,
-//           "wid":wid
-//         }
-//       }
-//   }
-
-//   // Start the request
-//   request(options, function (error, response, body) {
-//     if (!error) {
-//       //console.log("Create project response for %s:", name)
-//       //console.log(response.statusCode)
-//       //console.log(body)
-//       try {
-//         var responseData = JSON.parse(body);
-//         if (responseData.data === undefined) {
-//           console.error("Error creating project");
-//           return;
-//         }
-//         console.log("------------")
-//         console.log(responseData.data)
-//         var tProject = {
-//           "id": responseData.data.id,
-//           "name": responseData.data.name,
-//           "default_wid": wid,
-//           "wid": responseData.data.wid
-//         }
-//         console.log("new project")
-//         console.log(tProject)
-//         //console.log("created new project:")
-//         //console.log(tProject)
-//         //addTogglEntry(wProject,tProject)
-//         addEntriesToProject(entries,tProject.id);
-//       } catch(e) {
-//         console.log("error parsing json response from createTogglProjectWithEntry(). Response:")
-//         console.log(body)
-//       }
-//     } else {
-//       console.error(error)
-//     }
-//   });
-// }
-
 function addUnfiledEntries(name,entries,wid) {
+  // Using setTimeout to rate-limit API calls. There is *definitely* a
+  // better way to do this. Pull Requests welcome ;)
+
   for (var i=0, l=entries.length; i<l; i++) {
     (function(n,e,w){
       setTimeout(
@@ -179,8 +134,6 @@ function addUnfiledEntries(name,entries,wid) {
 }
 
 function addUnfiledTogglEntry(name,entry,wid) {
-  //console.log("ping - %s",name);
-
   var startTime = new Date(entry.time * 1000).toISOString()
   var timeEntry = {
     "time_entry": {
@@ -203,12 +156,8 @@ function addUnfiledTogglEntry(name,entry,wid) {
       json: timeEntry
   }
 
-
-  //console.log(options)
-  // Start the request
   request(options, function (error, response, body) {
     if (!error) {
-      //console.log(response.statusCode)
       if (response.statusCode !== 200) {
         console.log("----------------------------------")
         console.log(response.statusCode)
@@ -216,7 +165,6 @@ function addUnfiledTogglEntry(name,entry,wid) {
         console.log(response)
         console.log("----------------------------------")
       }
-      //console.log(body)
     } else {
       console.error(error)
     }
@@ -224,6 +172,9 @@ function addUnfiledTogglEntry(name,entry,wid) {
 }
 
 function addEntriesToProject(entries,projectID) {
+  // Using setTimeout to rate-limit API calls. There is *definitely* a
+  // better way to do this. Pull Requests welcome ;)
+
   for (var i=0, l=entries.length; i<l; i++) {
     (function(e,id){
       setTimeout(
@@ -233,8 +184,6 @@ function addEntriesToProject(entries,projectID) {
 }
 
 function addTogglEntry(wProject,projectID) {
-  //console.log("ping - %s",wProject.project);
-
   var startTime = new Date(wProject.time * 1000).toISOString()
   var timeEntry = {
     "time_entry": {
@@ -257,13 +206,8 @@ function addTogglEntry(wProject,projectID) {
       json: timeEntry
   }
 
-  // console.log(options)
-  // return
-
-  // Start the request
   request(options, function (error, response, body) {
     if (!error) {
-      //console.log(response.statusCode)
       if (response.statusCode !== 200) {
         console.log("----------------------------------")
         console.log(response.statusCode)
@@ -271,8 +215,6 @@ function addTogglEntry(wProject,projectID) {
         console.log(response)
         console.log("----------------------------------")
       }
-
-      //console.log(body)
     } else {
       console.error(error)
     }
@@ -285,7 +227,3 @@ function uniq(a) {
     return seen.hasOwnProperty(item) ? false : (seen[item] = true);
   });
 }
-
-
-//console.log(process.env.WAKAKEY);
-//console.log(yesterday);
