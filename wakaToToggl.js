@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var dotenv = require('dotenv');
 var request = require('request');
 var schedule = require('node-schedule');

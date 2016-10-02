@@ -2,7 +2,7 @@
   "name": "wakatimetotoggl",
   "version": "0.1.0",
   "description": "API Adapter to post Wakatime stats as Toggl projects",
-  "main": "index.js",
+  "main": "wakaToToggl.js",
   "scripts": {
     "compile": "node_modules/nexe/bin/nexe"
   },
@@ -24,7 +24,7 @@
     "nexe": "^1.1.2"
   },
   "nexe": {
-    "input": "./index.js",
+    "input": "./wakaToToggl.js",
     "output": "./bin/wakaToToggl^$",
     "runtime": {
       "framework": "node",
