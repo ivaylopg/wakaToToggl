@@ -119,7 +119,6 @@ function getTogglUserData() {
   })
 }
 
-
 function processTogglData(body) {
   var togglData = JSON.parse(body)
   if (togglData === undefined || togglData.data === undefined || togglData.data.projects === undefined) {return};
