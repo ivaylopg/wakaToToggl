@@ -6,6 +6,13 @@ var argv = require('argv');
 // Define CLI flags
 var argOptions = [
   {
+    name: 'help',
+    short: 'h',
+    type: 'boolean',
+    description: 'Displays help information about this script',
+    example: "'wakaToToggl -h' or 'wakaToToggl --help'"
+  },
+  {
     name: 'togglKey',
     short: 't',
     type: 'string',
@@ -16,7 +23,7 @@ var argOptions = [
     name: 'wakaKey',
     short: 'w',
     type: 'string',
-    description: 'Define user\'s Toggl API key',
+    description: 'Define user\'s WakaTime API key',
     example: "'wakaToToggl --wakaKey=value' or 'wakaToToggl -w value'"
   },
   {
@@ -36,7 +43,7 @@ var argOptions = [
   {
     name: 'daysBack',
     short: 'b',
-    type: 'iny',
+    type: 'int',
     description: 'Get data from how many days back (ie - \'1\' would be yesterday, \'4\' would be 4 days ago',
     example: "'wakaToToggl --daysBack=value' or 'keepRunning -b value'"
   },
@@ -59,8 +66,12 @@ var argOptions = [
 // Look for .env file with config data
 dotenv.config();
 
+argv.version( 'v1.0' );
+argv.info( 'Usage: wakaToToggl [options]' );
+
 var today = new Date();
 var args = argv.option( argOptions ).run();
+var showHelp = argv.options.help;
 var togglKey = args.options.togglKey || process.env.TOGGLKEY;
 var wakaKey = args.options.wakaKey || process.env.WAKAKEY;
 var keepRunning = args.options.keepRunning || process.env.KEEPRUNNING;
@@ -73,8 +84,21 @@ checkOptionTypes();
 
 //console.log("togglKey: %s, wakaKey: %s, keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s",togglKey, wakaKey, keepRunning, daysBack, time, dryRun, verbose)
 
+if (showHelp) {
+  var helpString = "Usage: wakaToToggl [options]"
 
-if (togglKey === undefined) {
+  helpString = helpString + "\n\n        --version";
+  helpString = helpString + "\n            Displays version info";
+  helpString = helpString + "\n            wakaToToggl --version";
+
+  for (var i=0, l=argOptions.length; i<l; i++) {
+    if (argOptions[i].name === "help") {continue};
+    helpString = helpString + "\n\n        --" + argOptions[i].name + ", -" + argOptions[i].short;
+    helpString = helpString + "\n            " + argOptions[i].description;
+    helpString = helpString + "\n            " + argOptions[i].example;
+  }
+  console.log(helpString);
+} else if (togglKey === undefined) {
   printOutput("Missing Toggl API Key", true);
 } else if (wakaKey === undefined) {
   printOutput("Missing WakaTime API Key",true);
