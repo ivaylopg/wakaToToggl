@@ -4,7 +4,7 @@
   "description": "API Adapter to post Wakatime stats as Toggl projects",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "node_modules/nexe/bin/nexe"
   },
   "keywords": [
     "waktime",
@@ -19,5 +19,17 @@
     "dotenv": "^2.0.0",
     "node-schedule": "^1.1.1",
     "request": "^2.75.0"
+  },
+  "devDependencies": {
+    "nexe": "^1.1.2"
+  },
+  "nexe": {
+    "input": "./index.js",
+    "output": "./bin/wakaToToggl^$",
+    "runtime": {
+      "framework": "node",
+      "version": "4.2.2",
+      "ignoreFlags": true
+    }
   }
 }
