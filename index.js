@@ -1,33 +1,111 @@
 require('dotenv').config()
 var request = require('request');
+var argv = require( 'argv' );
 
-if (process.env.KEEPRUNNING) {
-  console.log("willKeepRunning");
+var argOptions = [
+  {
+    name: 'togglKey',
+    short: 't',
+    type: 'string',
+    description: 'Define user\'s Toggl API key',
+    example: "'wakaToToggl --togglKey=value' or 'wakaToToggl -t value'"
+  },
+  {
+    name: 'wakaKey',
+    short: 'w',
+    type: 'string',
+    description: 'Define user\'s Toggl API key',
+    example: "'wakaToToggl --wakaKey=value' or 'wakaToToggl -w value'"
+  },
+  {
+    name: 'keepRunning',
+    short: 'k',
+    type: 'boolean',
+    description: 'If keepRunning is set to true, wakaToToggle will automatically run every 24h',
+    example: "'wakaToToggl --keepRunning=true' or 'keepRunning -k true'"
+  },
+  {
+    name: 'hour',
+    short: 'h',
+    type: 'int',
+    description: 'Define hour at which wakaToToggl runs if keepRunning is true',
+    example: "'wakaToToggl --hour=value' or 'wakaToToggl -h value'"
+  },
+  {
+    name: 'daysBack',
+    short: 'b',
+    type: 'iny',
+    description: 'Get data from how many days back (ie - \'1\' would be yesterday, \'4\' would be 4 days ago',
+    example: "'wakaToToggl --daysBack=value' or 'keepRunning -b value'"
+  },
+  {
+    name: 'dryRun',
+    short: 'd',
+    type: 'boolean',
+    description: 'Pulls and processes project data, but does not write anything to Toggl. Automatically sets \'verbose\' to true',
+    example: "'wakaToToggl --dryRun=value' or 'wakaToToggl -d value'"
+  },
+  {
+    name: 'verbose',
+    short: 'v',
+    type: 'boolean',
+    description: 'Print all log statements',
+    example: "'wakaToToggl --dryRun=value' or 'wakaToToggl -d value'"
+  }
+]
+
+var args = argv.option( argOptions ).run();
+var today = new Date();
+
+var togglKey = args.options.togglKey || process.env.TOGGLKEY;
+var wakaKey = args.options.wakaKey || process.env.WAKAKEY;
+var keepRunning = args.options.keepRunning || process.env.KEEPRUNNING;
+var daysBack = args.options.daysBack || parseInt(process.env.DAYS) || 1;
+var time = args.options.hour || parseInt(process.env.HOUR) || 2;
+var dryRun = args.options.dryRun;
+var verbose = args.options.dryRun || args.options.verbose;
+
+checkOptionTypes();
+
+//console.log("togglKey: %s, wakaKey: %s, keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s",togglKey, wakaKey, keepRunning, daysBack, time, dryRun, verbose)
+console.log("Running wakaToToggl at %s with options - keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s", today.toISOString(), keepRunning, daysBack, time, dryRun, verbose);
+
+if (togglKey === undefined) {
+  printOutput("Missing Toggl API Key", true);
+} else if (wakaKey === undefined) {
+  printOutput("Missing WakaTime API Key",true);
+} else if (keepRunning) {
+  printIfVerbose("willKeepRunning");
   //TO-DO
 } else {
-  console.log("onetime");
+  printIfVerbose("Syncing once now and exiting");
   getTogglUserData();
 }
 
+///////////////////////////////////////////////////////////
+
 function getTogglUserData() {
+  if (dryRun) {
+    printIfVerbose("Dry-run enables (Will not POST data to Toggl");
+  }
   var options = {
     url: 'https://www.toggl.com/api/v8/me?with_related_data=true',
     method: 'GET',
-    headers: {'Authorization': 'Basic ' + new Buffer(process.env.TOGGLKEY + ':api_token').toString('base64')}
+    headers: {'Authorization': 'Basic ' + new Buffer(togglKey + ':api_token').toString('base64')}
   }
 
   request(options, function (error, response, body) {
     if (!error) {
       if (response.statusCode !== 200) {
-        console.log("----------------------------------")
-        console.log(response.statusCode)
-        console.log("Response from Toggl API for User Data:");
-        console.log(response)
-        console.log("----------------------------------")
+        printIfVerbose("----------------------------------")
+        printIfVerbose(response.statusCode)
+        printIfVerbose("Response from Toggl API for User Data:");
+        printIfVerbose(response)
+        printIfVerbose("----------------------------------")
       }
       processTogglData(body);
     } else {
-      console.error(error)
+      printIfVerbose(error,true)
     }
   })
 }
@@ -53,12 +131,12 @@ function processTogglData(body) {
 }
 
 function getWakatimeData(togglProjects) {
-  var yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1)
+  var yesterday = today;
+  yesterday.setDate(yesterday.getDate() - daysBack)
   yesterday = yesterday.toISOString().split(/T/)[0];
 
   var options = {
-    url: 'https://wakatime.com/api/v1/users/current/durations?date='+yesterday+'&api_key='+process.env.WAKAKEY,
+    url: 'https://wakatime.com/api/v1/users/current/durations?date='+yesterday+'&api_key='+wakaKey,
     method: 'GET'
   }
 
@@ -66,15 +144,15 @@ function getWakatimeData(togglProjects) {
   request(options, function (error, response, body) {
     if (!error) {
       if (response.statusCode !== 200) {
-        console.log("----------------------------------")
-        console.log(response.statusCode)
-        console.log("Response from WakaTime API for User Durations:");
-        console.log(response)
-        console.log("----------------------------------")
+        printIfVerbose("----------------------------------")
+        printIfVerbose(response.statusCode)
+        printIfVerbose("Response from WakaTime API for User Durations:");
+        printIfVerbose(response)
+        printIfVerbose("----------------------------------")
       }
       processWakatimeData(body,togglProjects);
     } else {
-      console.error(error)
+      printIfVerbose(error,true)
     }
   })
 }
@@ -91,6 +169,7 @@ function processWakatimeData(body,togglProjects) {
     }
     return true;
   });
+  printIfVerbose("total projects to add: " + wakaProjects.length)
 
   var defaultWID = togglProjects[0].default_wid;
   var wakaProjectNames = wakaProjects.map(function(data){
@@ -109,13 +188,17 @@ function processWakatimeData(body,togglProjects) {
 
     for (var k = togglProjects.length - 1; k >= 0; k--) {
       if (togglProjects[k].name.toLowerCase() === wakaProjectNames[i].toLowerCase()) {
-        console.log("Add %s entries to existing project '%s'", entriesForProject.length, togglProjects[k].name)
-        addEntriesToProject(entriesForProject,togglProjects[k].id);
+        printIfVerbose("Add " + entriesForProject.length + " entries to existing project '" + togglProjects[k].name + "'");
+        if (!dryRun) {
+          //addEntriesToProject(entriesForProject,togglProjects[k].id);
+        }
         break;
       }
       if (k === 0) {
-        console.log("Add %s unfiled entries", entriesForProject.length)
-        addUnfiledEntries(wakaProjectNames[i],entriesForProject,defaultWID);
+        printIfVerbose("Add %s unfiled entries", entriesForProject.length)
+        if (!dryRun) {
+          //addUnfiledEntries(wakaProjectNames[i],entriesForProject,defaultWID);
+        }
       }
     }
   }
@@ -151,7 +234,7 @@ function addUnfiledTogglEntry(name,entry,wid) {
       method: 'POST',
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Basic " + new Buffer(process.env.TOGGLKEY + ":api_token").toString('base64'),
+        "Authorization": "Basic " + new Buffer(togglKey + ":api_token").toString('base64'),
       },
       json: timeEntry
   }
@@ -159,14 +242,14 @@ function addUnfiledTogglEntry(name,entry,wid) {
   request(options, function (error, response, body) {
     if (!error) {
       if (response.statusCode !== 200) {
-        console.log("----------------------------------")
-        console.log(response.statusCode)
-        console.log("Response For '%s': ",name);
-        console.log(response)
-        console.log("----------------------------------")
+        printIfVerbose("----------------------------------")
+        printIfVerbose(response.statusCode)
+        printIfVerbose("Response For '%s': ",name);
+        printIfVerbose(response)
+        printIfVerbose("----------------------------------")
       }
     } else {
-      console.error(error)
+      printIfVerbose(error,true)
     }
   });
 }
@@ -201,7 +284,7 @@ function addTogglEntry(wProject,projectID) {
       method: 'POST',
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Basic " + new Buffer(process.env.TOGGLKEY + ":api_token").toString('base64'),
+        "Authorization": "Basic " + new Buffer(togglKey + ":api_token").toString('base64'),
       },
       json: timeEntry
   }
@@ -209,16 +292,51 @@ function addTogglEntry(wProject,projectID) {
   request(options, function (error, response, body) {
     if (!error) {
       if (response.statusCode !== 200) {
-        console.log("----------------------------------")
-        console.log(response.statusCode)
-        console.log("Response For '%s' with ID %s",wProject.project,projectID);
-        console.log(response)
-        console.log("----------------------------------")
+        printIfVerbose("----------------------------------")
+        printIfVerbose(response.statusCode)
+        printIfVerbose("Response For '%s' with ID %s",wProject.project,projectID);
+        printIfVerbose(response)
+        printIfVerbose("----------------------------------")
       }
     } else {
-      console.error(error)
+      printIfVerbose(error,true)
     }
   });
+}
+
+function printOutput(text, isAlert) {
+  var outText = text;
+  if (isAlert) {
+    outText = "ALERT: " + outText;
+  }
+  console.log(outText);
+}
+
+function printIfVerbose(text,isAlert) {
+  if (!verbose) {return};
+  var outText = text;
+  if (isAlert) {
+    outText = "ALERT: " + outText;
+  }
+  console.log(outText);
+}
+
+function checkOptionTypes() {
+  if (typeof daysBack !== "number" || daysBack <= 0) {
+    daysBack = 1;
+  }
+
+  if (typeof time !== "number" || time < 0 || time > 23) {
+    time = 2;
+  }
+
+  if (typeof keepRunning !== "boolean") {
+    if (keepRunning === undefined || (keepRunning.toLowerCase() !== "true" && keepRunning !=="1")) {
+      keepRunning = false
+    } else {
+      keepRunning = true;
+    }
+  }
 }
 
 function uniq(a) {
