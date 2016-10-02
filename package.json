@@ -17,6 +17,7 @@
   "dependencies": {
     "argv": "0.0.2",
     "dotenv": "^2.0.0",
+    "node-schedule": "^1.1.1",
     "request": "^2.75.0"
   }
 }

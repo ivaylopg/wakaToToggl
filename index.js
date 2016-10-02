@@ -1,5 +1,6 @@
 require('dotenv').config()
 var request = require('request');
+var schedule = require('node-schedule');
 var argv = require( 'argv' );
 
 var argOptions = [
@@ -64,7 +65,7 @@ var daysBack = args.options.daysBack || parseInt(process.env.DAYS) || 1;
 var time = args.options.hour || parseInt(process.env.HOUR) || 2;
 var dryRun = args.options.dryRun;
 var verbose = args.options.dryRun || args.options.verbose;
-
+var activeSchedule;
 checkOptionTypes();
 
 //console.log("togglKey: %s, wakaKey: %s, keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s",togglKey, wakaKey, keepRunning, daysBack, time, dryRun, verbose)
@@ -76,10 +77,11 @@ if (togglKey === undefined) {
   printOutput("Missing WakaTime API Key",true);
 } else if (keepRunning) {
   printIfVerbose("willKeepRunning");
-  //TO-DO
+  var activeSchedule = schedule.scheduleJob('41 17 * * *', function(){
+    getTogglUserData();
+  });
 } else {
   printIfVerbose("Syncing once now and exiting");
-  getTogglUserData();
 }
 
 ///////////////////////////////////////////////////////////
