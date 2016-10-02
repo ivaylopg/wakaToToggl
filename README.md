@@ -17,8 +17,8 @@ You can run `wakaToToggl` as a nodejs script...
 
 `./wakaToToggl.js [options]` or `node wakaToToggl.js [options]`
 
-...or as a self-contained CLI executable (does not require node on your system).
-OS X executable here, or compile your own for other platforms.
+...or as a self-contained CLI [executable](https://github.com/ivaylopg/wakaToToggl/releases/) (does not require node on your system).
+OS X executable here, or compile your own for other platforms (See **Compiling** below).
 
 
 # Scheduling
