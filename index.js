@@ -69,26 +69,30 @@ var activeSchedule;
 checkOptionTypes();
 
 //console.log("togglKey: %s, wakaKey: %s, keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s",togglKey, wakaKey, keepRunning, daysBack, time, dryRun, verbose)
-console.log("Running wakaToToggl at %s with options - keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s", today.toISOString(), keepRunning, daysBack, time, dryRun, verbose);
+
 
 if (togglKey === undefined) {
   printOutput("Missing Toggl API Key", true);
 } else if (wakaKey === undefined) {
   printOutput("Missing WakaTime API Key",true);
 } else if (keepRunning) {
-  printIfVerbose("willKeepRunning");
-  var activeSchedule = schedule.scheduleJob('41 17 * * *', function(){
+  printIfVerbose("----------------------------------")
+  printIfVerbose("Will run every day at " + time + ":00");
+  var activeSchedule = schedule.scheduleJob('00 ' + time + ' * * *', function(){
     getTogglUserData();
   });
 } else {
+  printIfVerbose("----------------------------------")
   printIfVerbose("Syncing once now and exiting");
+  getTogglUserData();
 }
 
 ///////////////////////////////////////////////////////////
 
 function getTogglUserData() {
+  console.log("Running wakaToToggl at %s with options - keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s", today.toISOString(), keepRunning, daysBack, time, dryRun, verbose);
   if (dryRun) {
-    printIfVerbose("Dry-run enables (Will not POST data to Toggl");
+    printIfVerbose("Dry-run enabled (Will not POST data to Toggl)");
   }
   var options = {
     url: 'https://www.toggl.com/api/v8/me?with_related_data=true',
