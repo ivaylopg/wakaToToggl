@@ -6,60 +6,53 @@ var argv = require('argv');
 // Define CLI flags
 var argOptions = [
   {
-    name: 'help',
-    short: 'h',
-    type: 'boolean',
-    description: 'Displays help information about this script',
-    example: "'wakaToToggl -h' or 'wakaToToggl --help'"
-  },
-  {
     name: 'togglKey',
     short: 't',
     type: 'string',
-    description: 'Define user\'s Toggl API key',
+    description: 'Define user\'s Toggl API key.',
     example: "'wakaToToggl --togglKey=value' or 'wakaToToggl -t value'"
   },
   {
     name: 'wakaKey',
     short: 'w',
     type: 'string',
-    description: 'Define user\'s WakaTime API key',
+    description: 'Define user\'s WakaTime API key.',
     example: "'wakaToToggl --wakaKey=value' or 'wakaToToggl -w value'"
   },
   {
     name: 'keepRunning',
     short: 'k',
     type: 'boolean',
-    description: 'If keepRunning is set to true, wakaToToggle will automatically run every 24h',
-    example: "'wakaToToggl --keepRunning=true' or 'keepRunning -k true'"
+    description: 'If keepRunning is set to true, wakaToToggle will automatically run every 24h.',
+    example: "'wakaToToggl --keepRunning' or 'wakaToToggl -k'"
   },
   {
     name: 'hour',
-    short: 'h',
+    short: 'r',
     type: 'int',
-    description: 'Define hour at which wakaToToggl runs if keepRunning is true',
-    example: "'wakaToToggl --hour=value' or 'wakaToToggl -h value'"
+    description: 'Define hour at which wakaToToggl runs if keepRunning is true.',
+    example: "'wakaToToggl --hour=value' or 'wakaToToggl -r value'"
   },
   {
     name: 'daysBack',
     short: 'b',
     type: 'int',
-    description: 'Get data from how many days back (ie - \'1\' would be yesterday, \'4\' would be 4 days ago',
-    example: "'wakaToToggl --daysBack=value' or 'keepRunning -b value'"
+    description: 'Get data from how many days back (ie - \'1\' would be yesterday, \'4\' would be 4 days ago.',
+    example: "'wakaToToggl --daysBack=value' or 'wakaToToggl -b value'"
   },
   {
     name: 'dryRun',
     short: 'd',
     type: 'boolean',
-    description: 'Pulls and processes project data, but does not write anything to Toggl. Automatically sets \'verbose\' to true',
-    example: "'wakaToToggl --dryRun=value' or 'wakaToToggl -d value'"
+    description: 'Pulls and processes project data, but does not write anything to Toggl. Automatically sets \'verbose\' to true.',
+    example: "'wakaToToggl --dryRun' or 'wakaToToggl -d'"
   },
   {
     name: 'verbose',
     short: 'v',
     type: 'boolean',
-    description: 'Print all log statements',
-    example: "'wakaToToggl --dryRun=value' or 'wakaToToggl -d value'"
+    description: 'Print all log statements.',
+    example: "'wakaToToggl --verbose' or 'wakaToToggl -v'"
   }
 ]
 
@@ -67,16 +60,22 @@ var argOptions = [
 dotenv.config();
 
 argv.version( 'v1.0' );
-argv.info( 'Usage: wakaToToggl [options]' );
+argv.info( '    WakaToToggle is a utility to sync your WakaTime entries to your Toggl account.\n\n    Usage: wakaToToggl [options]\n\n        Arguments passed via the command line will override environment vars.' );
 
 var today = new Date();
-var args = argv.option( argOptions ).run();
-var showHelp = argv.options.help;
+//var args = argv.option( argOptions ).run();
+var args = argv.option( argOptions );
+
+// Override default 'help' and 'version' descriptions
+argv.options.help.example = "'wakaToToggl -h' or 'wakaToToggl --help'";
+argv.options.version.example = "'wakaToToggl --version'";
+var args = argv.run();
+
 var togglKey = args.options.togglKey || process.env.TOGGLKEY;
 var wakaKey = args.options.wakaKey || process.env.WAKAKEY;
 var keepRunning = args.options.keepRunning || process.env.KEEPRUNNING;
 var daysBack = args.options.daysBack || parseInt(process.env.DAYS) || 1;
-var time = args.options.hour || parseInt(process.env.HOUR) || 2;
+var time = args.options.hour || parseInt(process.env.HOUR) || 4;
 var dryRun = args.options.dryRun;
 var verbose = args.options.dryRun || args.options.verbose;
 var activeSchedule;
@@ -84,28 +83,14 @@ checkOptionTypes();
 
 //console.log("togglKey: %s, wakaKey: %s, keepRunning: %s, daysBack: %s, time: %s, dryRun: %s, verbose: %s",togglKey, wakaKey, keepRunning, daysBack, time, dryRun, verbose)
 
-if (showHelp) {
-  var helpString = "Usage: wakaToToggl [options]"
-
-  helpString = helpString + "\n\n        --version";
-  helpString = helpString + "\n            Displays version info";
-  helpString = helpString + "\n            wakaToToggl --version";
-
-  for (var i=0, l=argOptions.length; i<l; i++) {
-    if (argOptions[i].name === "help") {continue};
-    helpString = helpString + "\n\n        --" + argOptions[i].name + ", -" + argOptions[i].short;
-    helpString = helpString + "\n            " + argOptions[i].description;
-    helpString = helpString + "\n            " + argOptions[i].example;
-  }
-  console.log(helpString);
-} else if (togglKey === undefined) {
+if (togglKey === undefined) {
   printOutput("Missing Toggl API Key", true);
 } else if (wakaKey === undefined) {
   printOutput("Missing WakaTime API Key",true);
 } else if (keepRunning) {
   printIfVerbose("----------------------------------")
   printIfVerbose("Will run every day at " + time + ":00");
-  var activeSchedule = schedule.scheduleJob('00 ' + time + ' * * *', function(){
+  var activeSchedule = schedule.scheduleJob('0 ' + time + ' * * *', function(){
     getTogglUserData();
   });
 } else {
