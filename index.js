@@ -1,8 +1,9 @@
-require('dotenv').config()
+var dotenv = require('dotenv');
 var request = require('request');
 var schedule = require('node-schedule');
-var argv = require( 'argv' );
+var argv = require('argv');
 
+// Define CLI flags
 var argOptions = [
   {
     name: 'togglKey',
@@ -55,9 +56,11 @@ var argOptions = [
   }
 ]
 
-var args = argv.option( argOptions ).run();
-var today = new Date();
+// Look for .env file with config data
+dotenv.config();
 
+var today = new Date();
+var args = argv.option( argOptions ).run();
 var togglKey = args.options.togglKey || process.env.TOGGLKEY;
 var wakaKey = args.options.wakaKey || process.env.WAKAKEY;
 var keepRunning = args.options.keepRunning || process.env.KEEPRUNNING;
@@ -196,14 +199,14 @@ function processWakatimeData(body,togglProjects) {
       if (togglProjects[k].name.toLowerCase() === wakaProjectNames[i].toLowerCase()) {
         printIfVerbose("Add " + entriesForProject.length + " entries to existing project '" + togglProjects[k].name + "'");
         if (!dryRun) {
-          //addEntriesToProject(entriesForProject,togglProjects[k].id);
+          addEntriesToProject(entriesForProject,togglProjects[k].id);
         }
         break;
       }
       if (k === 0) {
         printIfVerbose("Add %s unfiled entries", entriesForProject.length)
         if (!dryRun) {
-          //addUnfiledEntries(wakaProjectNames[i],entriesForProject,defaultWID);
+          addUnfiledEntries(wakaProjectNames[i],entriesForProject,defaultWID);
         }
       }
     }
