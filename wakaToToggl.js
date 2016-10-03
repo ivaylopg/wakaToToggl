@@ -91,8 +91,8 @@ if (togglKey === undefined) {
   printOutput("Missing WakaTime API Key",true);
 } else if (keepRunning) {
   printIfVerbose("----------------------------------")
-  printIfVerbose("Will run every day at " + time + ":00");
-  var activeSchedule = schedule.scheduleJob('0 ' + time + ' * * *', function(){
+  printIfVerbose("Will run every day at " + time + ":15");
+  var activeSchedule = schedule.scheduleJob('15 ' + time + ' * * *', function(){
     getTogglUserData();
   });
 } else {
