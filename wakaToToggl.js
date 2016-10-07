@@ -71,7 +71,7 @@ var args = argv.option( argOptions );
 // Override default 'help' and 'version' descriptions
 argv.options.help.example = "'wakaToToggl -h' or 'wakaToToggl --help'";
 argv.options.version.example = "'wakaToToggl --version'";
-var args = argv.run();
+args = argv.run();
 
 var togglKey = args.options.togglKey || process.env.TOGGLKEY;
 var wakaKey = args.options.wakaKey || process.env.WAKAKEY;
@@ -137,7 +137,7 @@ function processTogglData(body) {
   if (togglData === undefined || togglData.data === undefined || togglData.data.projects === undefined) { return }
 
   var togglProjects = togglData.data.projects.filter(function(data) {
-    return data.server_deleted_at ? false : true
+    return !data.server_deleted_at;
   });
 
   togglProjects = togglProjects.map(function(data) {
